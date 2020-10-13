@@ -1,0 +1,64 @@
+<script type="text/html" data-template-name="add event">
+  <div class="form-row">
+    <label for="node-input-google"><i class="fa fa-user"></i> Google</label>
+    <input type="text" id="node-input-google">
+  </div>
+  <div class="form-row">
+    <label for="node-input-calendarId"><i class="fa fa-tag"></i> Calendar</label>
+    <select id="node-input-calendarId" style="width: 70%"></select>
+  </div>
+</script>
+
+<script type="text/html" data-help-name="add event">
+  <!-- TODO: rewrite help message -->
+  <p>Create an event in a <a href="https://www.google.com/calendar">Google Calendar</a>.</p>
+  <p>The incoming message can provide the following properties:
+    <ul>
+      <li><b>Calendar</b> - the summary string from the calendar entry</li>
+      <li><b>title</b> - the summary string from the calendar entry</li>
+      <li><b>description</b> - the description from the calendar entry</li>
+      <li><b>location</b> - the location string from the calendar entry</li>
+      <li><b>start</b> - date of start time</li>
+      <li><b>end</b> - date of end time</li>
+    </ul>
+  </p>
+  <p>The message sent from the node will have properties:
+    <ul>
+      <li><b>payload</b> - Success/Error</li>
+    </ul>
+  </p>
+</script>
+
+<script type="text/javascript">
+  var selected1;
+  RED.nodes.registerType('add-event', {
+    category: 'Google calendar event',
+    color: "#C0DEED",
+    defaults: {
+      google: {type: "google-credentials", required: true},
+      calendarId: {value: ""},
+    },
+    inputs: 1,
+    outputs: 1,
+    icon: "add-event.png",
+    paletteLabel: 'add event',
+    label: function () {
+      return this.name || "add event";
+    },
+    oneditprepare: function () {
+      $('.drp-buttons').hide()
+      var google = $("#node-input-google").val() || ""
+      $.getJSON('cal?id=' + google, function (data) {
+        data.forEach(function (element) {
+          $("#node-input-calendarId").append('<option value=' + element + '>' + element + '</option>');
+          if (selected1 == element) {
+            $('#node-input-calendarId option[value="' + selected1 + '"]').prop('selected', true)
+          }
+        })
+      })
+    },
+    oneditsave: function () {
+      selected1 = $("#node-input-calendarId option:selected").val();
+    }
+  });
+</script>
