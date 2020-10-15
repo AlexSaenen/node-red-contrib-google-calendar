@@ -1,83 +1,77 @@
-var request = require('request');
-module.exports = function(RED) {
-  "use strict";
-  function addEvent(n) {
-    RED.nodes.createNode(this,n);
+module.exports = function (RED) {
+  'use strict';
+  const {
+    calendarByNameOrId,
+    calendarList,
+  } = require('./lib/calendar');
+
+  function AddEventNode(n) {
+    RED.nodes.createNode(this, n);
     this.google = RED.nodes.getNode(n.google);
+    this.calendar = n.calendar || 'primary';
+
     if (!this.google || !this.google.credentials.accessToken) {
-      this.warn(RED._("calendar.warn.no-credentials"));
+      this.warn(RED._('calendar.warn.no-credentials'));
       return;
     }
-    var calendarId = n.calendarId || ""
-    var node = this;
 
-    node.on('input', function(msg) {
-      calendarId = msg.calendarId ? msg.calendarId : calendarId
+    const node = this;
+    node.status({ fill: 'blue', shape: 'dot', text: 'calendar.status.querying' });
 
-      var timeStart = msg.start ? msg.start : n.time.split(" - ")[0];
-      var timeEnd = msg.end ? msg.end : n.time.split(" - ")[1];
-
-      var api = 'https://www.googleapis.com/calendar/v3/calendars/'
-      var newObj = {
-        summary: msg.summary,
-        description: msg.description,
-        location: msg.location,
-        start: {dateTime: new Date(timeStart)},
-        end: {dateTime: new Date(timeEnd)},
+    calendarList(RED, node, function (err) {
+      if (err) {
+        node.error(err, {});
+        node.status({ fill: 'red', shape: 'ring', text: 'calendar.status.failed' });
+        return;
       }
+      node.status({});
 
-      var linkUrl = api + encodeURIComponent(calendarId) + '/events'
-      var opts = {
-        method: "POST",
-        url: linkUrl,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + node.google.credentials.accessToken
-        },
-        body: JSON.stringify(newObj)
-      };
-      request(opts, function (error, response, body) {
-        if (error) {
-          node.error(error,{});
-          node.status({fill:"red",shape:"ring",text:"calendar.status.failed"});
+      node.on('input', function (msg) {
+        node.status({ fill: 'blue', shape: 'dot', text: 'calendar.status.creating' });
+        const cal = calendarByNameOrId(node, msg.calendar) ||
+          calendarByNameOrId(node, node.calendar);
+
+        if (!cal) {
+          node.error(RED._('calendar.status.invalid-calendar'), msg);
+          node.status({ fill: 'red', shape: 'ring', text: 'calendar.error.invalid-calendar' });
           return;
         }
-        if (JSON.parse(body).kind == "calendar#event") {
-          msg.payload = "Successfully add event to " + calendarId
-        } else {
-          msg.payload = "Fail"
+
+        if (typeof msg.payload !== 'object') {
+          node.error(RED._('calendar.status.invalid-body'), msg);
+          node.status({ fill: 'red', shape: 'ring', text: 'calendar.error.invalid-body' });
+          return;
         }
 
-        node.send(msg);
-      })
+        addEvent(node, cal, msg);
+      });
     });
   }
-  RED.nodes.registerType("add-event", addEvent);
 
-  RED.httpAdmin.get('/cal', function(req, res) {
-    var googleId = res.socket.parser.incoming._parsedUrl.path.split("id=")[1];
-    RED.nodes.getNode(googleId).request('https://www.googleapis.com/calendar/v3/users/me/calendarList', function(err, data) {
-      if(err) return;
+  RED.nodes.registerType('add-event', AddEventNode);
 
-      var primary = "";
-      var arrCalendar = [];
-
-      for (var i = 0; i < data.items.length; i++) {
-        var cal = data.items[i];
-        if (cal.primary) {
-          primary = cal.id;
-        } else {
-          arrCalendar.push(cal.id)
-        }
+  function addEvent(node, cal, msg) {
+    const request = {
+      method: 'POST',
+      url: `https://www.googleapis.com/calendar/v3/calendars/${cal.id}/events`,
+      body: msg.payload,
+      query: {
+        sendUpdates: (msg.sendUpdates ? 'all' : false),
       }
+    };
 
-      var arrData = [];
-      arrData.push(primary);
-      arrCalendar.sort();
-      arrCalendar.forEach(function(element) {
-        arrData.push(element)
-      })
-      res.json(arrData)
-    })
-  })
+    node.google.request(request, function (err, data) {
+      if (err) {
+        node.error(err.toString(), msg);
+        node.status({ fill: 'red', shape: 'ring', text: 'calendar.status.failed' });
+      } else if (data.error) {
+        node.error(RED.util.ensureString(data.error.message), msg);
+        node.status({ fill: 'red', shape: 'ring', text: 'calendar.status.failed' });
+      } else {
+        node.status({ fill: 'green', shape: 'ring', text: 'calendar.status.created' });
+        msg.payload = data;
+        node.send(msg);
+      }
+    });
+  }
 };

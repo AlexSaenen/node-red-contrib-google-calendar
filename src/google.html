@@ -65,7 +65,7 @@
       clientSecret: { type: "password"}
     },
     label: function() {
-      return this.displayName || this._("google.label.google"); // TODO: fix this
+      return this.displayName || this._("google.label.google");
     },
     exportable: false,
     oneditprepare: function() {
@@ -182,12 +182,12 @@
 (function() {
   RED.nodes.registerType('google-api-config',{
     category: 'config',
-    defaults: { },
+    defaults: {},
     credentials: {
-      key: {type: "password",required:true},
+      key: { type: 'password', required:true },
     },
     label: function() {
-      return this._("google.label.googleapi");
+      return this._('google.label.googleapi');
     },
     exportable: false,
   });

@@ -1,0 +1,26 @@
+{
+  "calendar": {
+    "label": {
+      "google-calendar": "Google Calendar",
+      "google": "Google",
+      "calendar": "Calendar",
+      "get-event": "get event",
+      "name": "Name"
+    },
+    "status": {
+      "querying": "querying",
+      "invalid-calendar": "invalid calendar",
+      "fetching": "fetching",
+      "fetched": "fetched",
+      "failed": "failed"
+    },
+    "warn": {
+      "no-credentials": "Missing google credentials"
+    },
+    "error": {
+      "invalid-calendar": "invalid calendar",
+      "invalid-id": "invalid event id",
+      "fetch-failed": "failed to fetch calendar list: __message__"
+    }
+  }
+}

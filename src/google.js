@@ -41,7 +41,8 @@ module.exports = function(RED) {
   function createExponentialBackoff() {
     var exponentialBackoff = backoff.exponential({
       initialDelay: 100,
-      maxDelay: 73000,
+      maxDelay: 1000,
+      // maxDelay: 73000,
       factor: 9
     });
     exponentialBackoff.failAfter(4);
